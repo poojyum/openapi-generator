@@ -8,12 +8,12 @@ import http from 'http';
 import { {{classname}} } from '{{filename}}';
 {{/imports}}
 
-import { ObjectSerializer, Authentication, VoidAuth, Interceptor } from '../model/models';
+import { ObjectSerializer, Authentication, VoidAuth, Interceptor, ResponseInterceptor, SuccessHandler, HttpError } from '../model/models';
 {{#hasAuthMethods}}
 import { HttpBasicAuth, HttpBearerAuth, ApiKeyAuth, OAuth } from '../model/models';
 {{/hasAuthMethods}}
 
-import { HttpError, RequestFile } from './apis';
+import { RequestFile } from './apis';
 
 let defaultBasePath = '{{{basePath}}}';
 
@@ -60,7 +60,9 @@ export class {{classname}} {
 {{/hasAuthMethods}}
     }
 
-    protected interceptors: Interceptor[] = [];
+    protected reqInterceptors: Interceptor[] = [];
+
+    protected resInterceptors: ResponseInterceptor[] = [];
 
     constructor(basePath?: string);
 {{#authMethods}}
@@ -141,7 +143,7 @@ export class {{classname}} {
 {{/hasAuthMethods}}
 
     public addInterceptor(interceptor: Interceptor) {
-        this.interceptors.push(interceptor);
+        this.reqInterceptors.push(interceptor);
     }
 
 {{#operation}}
@@ -249,8 +251,13 @@ export class {{classname}} {
         authenticationPromise = authenticationPromise.then(() => this.authentications.default.applyToRequest(localVarRequestOptions));
 
         let interceptorPromise = authenticationPromise;
-        for (const interceptor of this.interceptors) {
+        for (const interceptor of this.reqInterceptors) {
             interceptorPromise = interceptorPromise.then(() => interceptor(localVarRequestOptions));
+        }
+
+        let resInterceptorPromise = Promise<SuccessHandler>;
+        for (const interceptor of this.resInterceptor) {
+            resInterceptorPromise = resInterceptorPromise.then(interceptor.successHandler, interceptor.errorHandler)
         }
 
         return interceptorPromise.then(() => {
@@ -276,7 +283,7 @@ export class {{classname}} {
                         }
                     }
                 });
-            });
+            }).then(resInterceptorPromise);
         });
     }
 {{/operation}}

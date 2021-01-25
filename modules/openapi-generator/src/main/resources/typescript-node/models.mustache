@@ -1,5 +1,6 @@
 {{#generateApis}}
 import localVarRequest from 'request';
+import * as http from 'http';
 {{/generateApis}}
 
 {{#models}}
@@ -252,4 +253,18 @@ export class VoidAuth implements Authentication {
 }
 
 export type Interceptor = (requestOptions: localVarRequest.Options) => (Promise<void> | void);
+
+export class HttpError extends Error {
+    constructor(public response: http.IncomingMessage, public body: any, public statusCode?: number) {
+        super('HTTP request failed');
+        this.name = 'HttpError';
+    }
+}
+
+export type ResponseInterceptor = {successHandler: SuccessHandler, errorHandler: ErrorHandler};
+
+export type ErrorHandler = (error: HttpError) => void;
+
+export type SuccessHandler = (res: { response: http.IncomingMessage, body: any }) => void;
+
 {{/generateApis}}
